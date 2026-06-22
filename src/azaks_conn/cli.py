@@ -1,6 +1,6 @@
 """Typer CLI: `azaks-conn` (alias `aksc`).
 
-Fetch AKS kubeconfig and merge into ~/.kube/config by alias
+Fetch AKS kubeconfig and merge into ~/.kube/config by alias.
 """
 
 from __future__ import annotations
@@ -11,10 +11,19 @@ import typer
 from rich.console import Console
 
 from azaks_conn import __version__
+from azaks_conn.aks import get_credentials
+from azaks_conn.errors import AzaksConnError
+from azaks_conn.kubeconfig import (
+    default_alias_dir,
+    default_kubeconfig,
+    merge_into,
+    rename_entries,
+    write_atomic,
+)
 
 app = typer.Typer(
     name="azaks-conn",
-    help="Fetch AKS kubeconfig and merge into ~/.kube/config by alias",
+    help="Fetch AKS kubeconfig and merge into ~/.kube/config by alias.",
     no_args_is_help=True,
     add_completion=True,
     rich_markup_mode="rich",
@@ -44,18 +53,95 @@ def _root(
     """Common options."""
 
 
-# TODO: replace this placeholder with real subcommands.
-#
-# Convention from the rest of the series:
-# - Each subcommand goes in its own @app.command()-decorated function below.
-# - Catch your typed errors (subclasses of AzaksConnError) and exit 2.
-# - Use `stdout`/`stderr` consoles above so error text goes to fd 2.
-# - Locator options accept env-var fallback via `envvar=`:
-#       SubOpt = Annotated[str, typer.Option("--subscription", "-s",
-#                                            envvar="AZURE_SUBSCRIPTION_ID")]
-@app.command("hello")
-def cmd_hello(
-    name: Annotated[str, typer.Option("--name", "-n", help="Who to greet.")] = "world",
+# ----------------------------------------------------------------- connect ----
+ClusterArg = Annotated[
+    str,
+    typer.Argument(help="AKS cluster name."),
+]
+AliasOpt = Annotated[
+    str | None,
+    typer.Option(
+        "--alias",
+        "-a",
+        help="Local context/cluster/user name. Defaults to [bold]CLUSTER[/bold].",
+    ),
+]
+AdminOpt = Annotated[
+    bool,
+    typer.Option(
+        "--admin",
+        help=(
+            "Fetch cluster-admin credentials (bypasses AAD). "
+            "[yellow]Treat the resulting kubeconfig as a high-privilege secret.[/yellow]"
+        ),
+    ),
+]
+OverwriteOpt = Annotated[
+    bool,
+    typer.Option(
+        "--overwrite",
+        help="Replace any existing entries for ALIAS in ~/.kube/config.",
+    ),
+]
+ResourceGroupOpt = Annotated[
+    str | None,
+    typer.Option(
+        "--resource-group",
+        "-g",
+        envvar="AZURE_RESOURCE_GROUP",
+        help="Resource group of the cluster. Falls back to [bold]AZURE_RESOURCE_GROUP[/bold].",
+    ),
+]
+SubscriptionOpt = Annotated[
+    str | None,
+    typer.Option(
+        "--subscription",
+        "-s",
+        envvar="AZURE_SUBSCRIPTION_ID",
+        help="Azure subscription id or name. Falls back to [bold]AZURE_SUBSCRIPTION_ID[/bold].",
+    ),
+]
+
+
+@app.command("connect")
+def cmd_connect(
+    cluster: ClusterArg,
+    alias: AliasOpt = None,
+    admin: AdminOpt = False,
+    overwrite: OverwriteOpt = False,
+    resource_group: ResourceGroupOpt = None,
+    subscription: SubscriptionOpt = None,
 ) -> None:
-    """Placeholder command. Delete when you add real subcommands."""
-    stdout.print(f"hello, [bold]{name}[/bold] — from [cyan]azaks-conn[/cyan]")
+    """Fetch credentials for [bold]CLUSTER[/bold] and merge into ~/.kube/config.
+
+    Writes a per-alias snapshot to [bold]~/.kube/azaks-conn/<alias>[/bold] (0600)
+    and adds/replaces matching entries in the main kubeconfig, then switches
+    [bold]current-context[/bold] to the alias.
+    """
+    alias_resolved = alias or cluster
+    try:
+        cfg = get_credentials(
+            cluster,
+            resource_group=resource_group,
+            subscription=subscription,
+            admin=admin,
+        )
+        rename_entries(cfg, alias_resolved)
+        alias_path = default_alias_dir() / alias_resolved
+        write_atomic(alias_path, cfg)
+        added = merge_into(default_kubeconfig(), cfg, alias_resolved, overwrite=overwrite)
+    except AzaksConnError as exc:
+        stderr.print(f"[red]error:[/red] {exc}")
+        raise typer.Exit(code=2) from exc
+
+    verb = "added" if added else "replaced"
+    stdout.print(
+        f"[green]✓[/green] {verb} context [bold cyan]{alias_resolved}[/bold cyan] "
+        f"in {default_kubeconfig()}"
+    )
+    stdout.print(f"  snapshot: [dim]{alias_path}[/dim]")
+    if admin:
+        stderr.print(
+            "[yellow]warning:[/yellow] fetched cluster-admin credentials — "
+            "guard this kubeconfig like a root key."
+        )

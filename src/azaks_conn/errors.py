@@ -7,10 +7,13 @@ class AzaksConnError(Exception):
     """Base class for all package errors."""
 
 
-# TODO: add tool-specific subclasses, e.g.
-#
-# class AksAccessError(AzaksConnError):
-#     """Raised when the AKS API is unreachable or caller lacks permission."""
-#
-# class KubeconfigWriteError(AzaksConnError):
-#     """Raised when ~/.kube/config cannot be written safely."""
+class AksAccessError(AzaksConnError):
+    """Raised when `az aks ...` cannot be invoked or returns an error."""
+
+
+class ClusterNotFoundError(AksAccessError):
+    """Raised when the named AKS cluster does not exist (or caller lacks RBAC)."""
+
+
+class KubeconfigWriteError(AzaksConnError):
+    """Raised when a kubeconfig file cannot be read, parsed, or written safely."""
