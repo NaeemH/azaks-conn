@@ -1,4 +1,4 @@
-"""Shared pytest fixtures for __CLI_NAME__."""
+"""Shared pytest fixtures for azaks-conn."""
 
 from __future__ import annotations
 

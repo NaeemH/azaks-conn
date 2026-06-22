@@ -1,32 +1,32 @@
-# __CLI_NAME__
+# azaks-conn
 
-__DESCRIPTION__
+Fetch AKS kubeconfig and merge into ~/.kube/config by alias
 
 ## Install
 
 ```bash
-pip install __CLI_NAME__
+pip install azaks-conn
 ```
 
 The package installs two console scripts that point at the same Typer app:
 
 | Command         | Use when                              |
 | --------------- | ------------------------------------- |
-| `__CLI_NAME__`  | Long form, friendly for scripts       |
-| `__CLI_ALIAS__` | Short alias for interactive shell use |
+| `azaks-conn`  | Long form, friendly for scripts       |
+| `aksc` | Short alias for interactive shell use |
 
 ## Usage
 
 ```bash
-__CLI_ALIAS__ --help
-__CLI_ALIAS__ --version
+aksc --help
+aksc --version
 ```
 
 ## Development
 
 ```bash
-git clone https://github.com/NaeemH/__CLI_NAME__.git
-cd __CLI_NAME__
+git clone https://github.com/NaeemH/azaks-conn.git
+cd azaks-conn
 python -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev]"
 pre-commit install
@@ -39,7 +39,7 @@ pytest -q
 
 ## Release
 
-Releases are tag-driven. Bump `src/__PKG_NAME__/__about__.py`, commit, then:
+Releases are tag-driven. Bump `src/azaks_conn/__about__.py`, commit, then:
 
 ```bash
 git tag v0.1.0

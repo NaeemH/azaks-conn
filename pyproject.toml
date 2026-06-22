@@ -3,9 +3,9 @@ requires = ["hatchling>=1.18"]
 build-backend = "hatchling.build"
 
 [project]
-name = "__CLI_NAME__"
+name = "azaks-conn"
 dynamic = ["version"]
-description = "__DESCRIPTION__"
+description = "Fetch AKS kubeconfig and merge into ~/.kube/config by alias"
 readme = "README.md"
 requires-python = ">=3.10"
 license = { file = "LICENSE" }
@@ -45,19 +45,19 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/NaeemH/__CLI_NAME__"
-Repository = "https://github.com/NaeemH/__CLI_NAME__"
-Issues = "https://github.com/NaeemH/__CLI_NAME__/issues"
+Homepage = "https://github.com/NaeemH/azaks-conn"
+Repository = "https://github.com/NaeemH/azaks-conn"
+Issues = "https://github.com/NaeemH/azaks-conn/issues"
 
 [project.scripts]
-__CLI_NAME__ = "__PKG_NAME__.cli:app"
-__CLI_ALIAS__ = "__PKG_NAME__.cli:app"
+azaks-conn = "azaks_conn.cli:app"
+aksc = "azaks_conn.cli:app"
 
 [tool.hatch.version]
-path = "src/__PKG_NAME__/__about__.py"
+path = "src/azaks_conn/__about__.py"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/__PKG_NAME__"]
+packages = ["src/azaks_conn"]
 
 [tool.ruff]
 line-length = 100
@@ -98,7 +98,7 @@ ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 minversion = "8.0"
-addopts = "-ra --strict-markers --cov=__PKG_NAME__ --cov-report=term-missing"
+addopts = "-ra --strict-markers --cov=azaks_conn --cov-report=term-missing"
 testpaths = ["tests"]
 # Uncomment when pytest-recording is enabled in [optional-dependencies].dev:
 # markers = [

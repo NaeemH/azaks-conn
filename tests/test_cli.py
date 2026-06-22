@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from typer.testing import CliRunner
 
-from __PKG_NAME__ import __version__
-from __PKG_NAME__.cli import app
+from azaks_conn import __version__
+from azaks_conn.cli import app
 
 runner = CliRunner()
 
@@ -19,7 +19,7 @@ def test_version_flag() -> None:
 def test_help_lists_subcommands() -> None:
     result = runner.invoke(app, ["--help"])
     assert result.exit_code == 0
-    assert "__CLI_NAME__" in result.stdout
+    assert "azaks-conn" in result.stdout
     # Replace `hello` once the placeholder command is removed.
     assert "hello" in result.stdout
 

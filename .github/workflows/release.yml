@@ -38,7 +38,7 @@ jobs:
     # on PyPI with this GitHub repo + workflow allow-listed.
     environment:
       name: pypi
-      url: https://pypi.org/p/__CLI_NAME__
+      url: https://pypi.org/p/azaks-conn
     permissions:
       id-token: write
     steps:
