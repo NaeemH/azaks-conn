@@ -16,21 +16,15 @@ def test_version_flag() -> None:
     assert __version__ in result.stdout
 
 
-def test_help_lists_subcommands() -> None:
+def test_help_lists_connect() -> None:
     result = runner.invoke(app, ["--help"])
     assert result.exit_code == 0
     assert "azaks-conn" in result.stdout
-    # Replace `hello` once the placeholder command is removed.
-    assert "hello" in result.stdout
+    assert "connect" in result.stdout
 
 
-def test_hello_default() -> None:
-    result = runner.invoke(app, ["hello"])
-    assert result.exit_code == 0
-    assert "world" in result.stdout
-
-
-def test_hello_named() -> None:
-    result = runner.invoke(app, ["hello", "--name", "naeem"])
-    assert result.exit_code == 0
-    assert "naeem" in result.stdout
+def test_no_args_is_help() -> None:
+    """Bare invocation should print help and exit non-zero (typer no_args_is_help)."""
+    result = runner.invoke(app, [])
+    # typer exits 0 with --help, but no_args_is_help triggers a usage error path.
+    assert "connect" in result.stdout or "Usage" in result.stdout

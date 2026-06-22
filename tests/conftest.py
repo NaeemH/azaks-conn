@@ -2,21 +2,54 @@
 
 from __future__ import annotations
 
-# Add shared fixtures here as the test surface grows.
-# Common patterns from the rest of the series:
-#
-# @pytest.fixture
-# def fake_az(monkeypatch: pytest.MonkeyPatch) -> list[list[str]]:
-#     """Stub shutil.which("az") + subprocess.run; record argv lists."""
-#     calls: list[list[str]] = []
-#
-#     def _which(cmd: str) -> str | None:
-#         return "/usr/bin/az" if cmd == "az" else None
-#
-#     def _run(argv, **kwargs):
-#         calls.append(list(argv))
-#         return subprocess.CompletedProcess(argv, 0, "", "")
-#
-#     monkeypatch.setattr("shutil.which", _which)
-#     monkeypatch.setattr("subprocess.run", _run)
-#     return calls
+from typing import Any
+
+import pytest
+
+
+@pytest.fixture
+def az_kubeconfig() -> dict[str, Any]:
+    """A minimal kubeconfig matching what `az aks get-credentials -n X` emits."""
+    return {
+        "apiVersion": "v1",
+        "kind": "Config",
+        "preferences": {},
+        "clusters": [
+            {
+                "name": "my-cluster",
+                "cluster": {
+                    "server": "https://my-cluster.example.azmk8s.io:443",
+                    "certificate-authority-data": "FAKE_CA",
+                },
+            }
+        ],
+        "users": [
+            {
+                "name": "clusterUser_my-rg_my-cluster",
+                "user": {
+                    "exec": {
+                        "apiVersion": "client.authentication.k8s.io/v1beta1",
+                        "command": "kubelogin",
+                        "args": ["get-token", "--login", "devicecode"],
+                    }
+                },
+            }
+        ],
+        "contexts": [
+            {
+                "name": "my-cluster",
+                "context": {
+                    "cluster": "my-cluster",
+                    "user": "clusterUser_my-rg_my-cluster",
+                },
+            }
+        ],
+        "current-context": "my-cluster",
+    }
+
+
+@pytest.fixture
+def kube_home(tmp_path, monkeypatch):
+    """Redirect ~/.kube to a per-test tmp dir via $HOME."""
+    monkeypatch.setenv("HOME", str(tmp_path))
+    return tmp_path

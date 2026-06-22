@@ -27,7 +27,7 @@ classifiers = [
 dependencies = [
   "typer>=0.12",
   "rich>=13.7",
-  # TODO: add tool-specific Azure SDK or other runtime deps here
+  "pyyaml>=6.0",
 ]
 
 [project.optional-dependencies]
@@ -38,10 +38,7 @@ dev = [
   "ruff>=0.5",
   "mypy>=1.10",
   "pre-commit>=3.7",
-  # If this tool will hit HTTP directly (azure-keyvault-*, azure-mgmt-*),
-  # uncomment the next two for VCR-cassette replay tests:
-  # "pytest-recording>=0.13",
-  # "vcrpy>=6.0",
+  "types-PyYAML>=6.0",
 ]
 
 [project.urls]
