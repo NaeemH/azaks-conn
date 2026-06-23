@@ -66,6 +66,21 @@ def test_list_surfaces_corrupt_state(kube_home: Path) -> None:
     assert "failed to read" in combined or "error" in combined.lower()
 
 
+def test_list_marks_admin_alias(kube_home: Path) -> None:
+    """Admin aliases must be visually flagged so they aren't mistaken for AAD ones."""
+    _seed_state(
+        {
+            "safe": AliasRecord(cluster="c1", admin=False, added_at="t"),
+            "danger": AliasRecord(cluster="c2", admin=True, added_at="t"),
+        }
+    )
+    result = runner.invoke(app, ["list"])
+    assert result.exit_code == 0
+    # The admin row should contain the literal "ADMIN" marker (Rich strips
+    # markup when stdout is not a TTY, so the bare word survives).
+    assert "ADMIN" in result.stdout
+
+
 # ==========================================================================
 # verify
 # ==========================================================================
@@ -131,6 +146,35 @@ def test_verify_passes_timeout(monkeypatch: pytest.MonkeyPatch, kube_home: Path)
     result = runner.invoke(app, ["verify", "prod", "--timeout", "30"])
     assert result.exit_code == 0
     assert captured["timeout"] == 30
+
+
+def test_verify_warns_on_admin_alias(monkeypatch: pytest.MonkeyPatch, kube_home: Path) -> None:
+    """A successful verify of a --admin alias must reprint the bypass warning."""
+    _seed_state({"prod": AliasRecord(cluster="prod-cluster", admin=True, added_at="t")})
+
+    def _stub(context: str, *, timeout_seconds: int = 10) -> str:
+        return "Kubernetes control plane is running at https://prod:443"
+
+    monkeypatch.setattr("azaks_conn.cli.kubectl.cluster_info", _stub)
+    result = runner.invoke(app, ["verify", "prod"])
+    assert result.exit_code == 0
+    combined = (result.stdout or "") + (result.stderr or "")
+    assert "cluster-admin" in combined
+    assert "warning" in combined.lower()
+
+
+def test_verify_no_warning_for_non_admin(monkeypatch: pytest.MonkeyPatch, kube_home: Path) -> None:
+    """Non-admin (AAD) aliases must NOT trigger the cluster-admin warning."""
+    _seed_state({"prod": AliasRecord(cluster="prod-cluster", admin=False, added_at="t")})
+
+    def _stub(context: str, *, timeout_seconds: int = 10) -> str:
+        return "Kubernetes control plane is running at https://prod:443"
+
+    monkeypatch.setattr("azaks_conn.cli.kubectl.cluster_info", _stub)
+    result = runner.invoke(app, ["verify", "prod"])
+    assert result.exit_code == 0
+    combined = (result.stdout or "") + (result.stderr or "")
+    assert "cluster-admin" not in combined
 
 
 # ==========================================================================
