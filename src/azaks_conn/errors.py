@@ -17,3 +17,15 @@ class ClusterNotFoundError(AksAccessError):
 
 class KubeconfigWriteError(AzaksConnError):
     """Raised when a kubeconfig file cannot be read, parsed, or written safely."""
+
+
+class KubectlNotFoundError(AzaksConnError):
+    """Raised when `kubectl` is not on PATH."""
+
+
+class KubectlProbeError(AzaksConnError):
+    """Raised when a kubectl probe (cluster-info etc.) exits non-zero."""
+
+
+class UnknownAliasError(AzaksConnError):
+    """Raised when the operator references an alias aksc does not manage."""

@@ -16,15 +16,15 @@ def test_version_flag() -> None:
     assert __version__ in result.stdout
 
 
-def test_help_lists_connect() -> None:
+def test_help_lists_all_commands() -> None:
     result = runner.invoke(app, ["--help"])
     assert result.exit_code == 0
     assert "azaks-conn" in result.stdout
-    assert "connect" in result.stdout
+    for cmd in ("connect", "list", "verify", "rm"):
+        assert cmd in result.stdout
 
 
 def test_no_args_is_help() -> None:
-    """Bare invocation should print help and exit non-zero (typer no_args_is_help)."""
+    """Bare invocation should print help via no_args_is_help."""
     result = runner.invoke(app, [])
-    # typer exits 0 with --help, but no_args_is_help triggers a usage error path.
     assert "connect" in result.stdout or "Usage" in result.stdout
