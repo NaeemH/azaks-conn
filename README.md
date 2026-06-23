@@ -22,6 +22,49 @@ aksc --help
 aksc --version
 ```
 
+Four commands cover the alias lifecycle:
+
+| Command | Purpose |
+| --- | --- |
+| `aksc connect CLUSTER [--alias NAME] [--resource-group RG] [--subscription SUB] [--admin] [--overwrite]` | Fetch AKS credentials and merge into `~/.kube/config` under the given alias. |
+| `aksc list` | Rich-table inventory of aksc-managed aliases (with provenance metadata). |
+| `aksc verify ALIAS [--timeout N]` | Probe the alias's API server via `kubectl cluster-info`. |
+| `aksc rm ALIAS [--force]` | Remove the alias from `~/.kube/config`, the snapshot directory, and the state file. |
+
+State lives in two places under `~/.kube/azaks-conn/`:
+
+- `<alias>` — a single-context kubeconfig snapshot for each managed alias (mode `0600`).
+- `.aliases.json` — JSON metadata (cluster, RG, subscription, admin flag, timestamp), used by `list` and `verify`.
+
+## Security model
+
+`aksc connect` shells out to `az aks get-credentials`. By default this fetches
+an **Entra ID (AAD) integrated** kubeconfig: actual authentication still flows
+through `kubelogin` and your Azure identity, and cluster RBAC applies.
+
+The `--admin` flag passes through to `az aks get-credentials --admin`, which
+returns a **cluster-admin certificate** in the kubeconfig. This bypasses Entra
+ID and RBAC entirely — anyone with the file is cluster-admin until the
+certificate expires (typically months).
+
+`aksc` makes admin contexts visually obvious so they aren't accidentally
+shared, committed, or left lying around:
+
+- `aksc connect --admin` prints a yellow `warning:` line citing the bypass.
+- `aksc list` flags the alias with a red `ADMIN` marker in the Admin column.
+- `aksc verify <admin-alias>` reprints the warning after each probe.
+- Both the merged entry in `~/.kube/config` and the per-alias snapshot under
+  `~/.kube/azaks-conn/` are written with mode `0600`.
+
+Guidance:
+
+- Prefer the default (AAD) flow whenever possible.
+- Only use `--admin` for cluster bootstrap / break-glass work.
+- Treat any `--admin` kubeconfig as a high-privilege secret — do not check it
+  into source control, share it over chat, or copy it to shared hosts.
+- `aksc rm <admin-alias>` is the fastest way to revoke local access; for full
+  revocation, rotate the cluster admin credentials in Azure.
+
 ## Development
 
 ```bash
@@ -42,8 +85,8 @@ pytest -q
 Releases are tag-driven. Bump `src/azaks_conn/__about__.py`, commit, then:
 
 ```bash
-git tag v0.1.0
-git push origin v0.1.0
+git tag v0.2.1
+git push origin v0.2.1
 ```
 
 `.github/workflows/release.yml` builds the sdist + wheel and publishes to PyPI

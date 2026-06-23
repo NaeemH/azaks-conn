@@ -181,8 +181,12 @@ def cmd_connect(
     stdout.print(f"  snapshot: [dim]{alias_path}[/dim]")
     if admin:
         stderr.print(
-            "[yellow]warning:[/yellow] fetched cluster-admin credentials — "
-            "guard this kubeconfig like a root key."
+            "[bold yellow]warning:[/bold yellow] fetched [bold red]cluster-admin[/bold red] "
+            "credentials — these bypass Entra ID / RBAC."
+        )
+        stderr.print(
+            "  [dim]Treat this kubeconfig as a high-privilege secret. "
+            "`aksc list` will flag it as ADMIN.[/dim]"
         )
 
 
@@ -216,7 +220,7 @@ def cmd_list() -> None:
             rec.cluster,
             rec.resource_group or "-",
             rec.subscription or "-",
-            "[yellow]✓[/yellow]" if rec.admin else "-",
+            "[bold red]ADMIN[/bold red]" if rec.admin else "-",
             rec.added_at or "-",
         )
     stdout.print(table)
@@ -244,6 +248,11 @@ def cmd_verify(
     first = next((ln for ln in out.splitlines() if ln.strip()), "")
     if first:
         stdout.print(f"  [dim]{first.strip()}[/dim]")
+    if records[alias].admin:
+        stderr.print(
+            f"[bold yellow]warning:[/bold yellow] alias [bold cyan]{alias}[/bold cyan] "
+            "holds [bold red]cluster-admin[/bold red] credentials — Entra ID / RBAC bypassed."
+        )
 
 
 # ---------------------------------------------------------------------- rm ----
