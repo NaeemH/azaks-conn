@@ -167,3 +167,49 @@ def merge_into(
 
     write_atomic(main_path, main_cfg)
     return not existed
+
+
+def main_has_alias(main_path: Path, alias: str) -> bool:
+    """Return True if `main_path` exists and has any entry named `alias`."""
+    if not main_path.exists():
+        return False
+    try:
+        main_cfg = _load_main(main_path)
+    except KubeconfigWriteError:
+        # If the kubeconfig is unparseable we can't say it has the alias.
+        # Caller should probably surface the parse error separately.
+        return False
+    for key in ("clusters", "users", "contexts"):
+        if any(e.get("name") == alias for e in main_cfg.get(key) or []):
+            return True
+    return False
+
+
+def remove_from(main_path: Path, alias: str) -> bool:
+    """Strip all entries named `alias` from the kubeconfig at `main_path`.
+
+    Idempotent: returns False (and writes nothing) if no matching entries
+    exist. If `current-context` was `alias`, clears it to `""` (kubectl
+    treats empty current-context as "no default selected").
+
+    Returns:
+        True iff at least one cluster/user/context entry was removed.
+    """
+    if not main_path.exists():
+        return False
+
+    main_cfg = _load_main(main_path)
+    removed = False
+    for key in ("clusters", "users", "contexts"):
+        entries = main_cfg.get(key) or []
+        kept = [e for e in entries if e.get("name") != alias]
+        if len(kept) != len(entries):
+            removed = True
+        main_cfg[key] = kept
+
+    if main_cfg.get("current-context") == alias:
+        main_cfg["current-context"] = ""
+
+    if removed:
+        write_atomic(main_path, main_cfg)
+    return removed
