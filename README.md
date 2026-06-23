@@ -27,6 +27,7 @@ Four commands cover the alias lifecycle:
 | Command | Purpose |
 | --- | --- |
 | `aksc connect CLUSTER [--alias NAME] [--resource-group RG] [--subscription SUB] [--admin] [--overwrite]` | Fetch AKS credentials and merge into `~/.kube/config` under the given alias. |
+| `aksc refresh ALIAS` | Re-fetch credentials for an existing alias using its recorded cluster / RG / subscription / admin flag. Useful after CA rotation or kubelogin cache expiry. |
 | `aksc list` | Rich-table inventory of aksc-managed aliases (with provenance metadata). |
 | `aksc verify ALIAS [--timeout N]` | Probe the alias's API server via `kubectl cluster-info`. |
 | `aksc rm ALIAS [--force]` | Remove the alias from `~/.kube/config`, the snapshot directory, and the state file. |
@@ -85,8 +86,8 @@ pytest -q
 Releases are tag-driven. Bump `src/azaks_conn/__about__.py`, commit, then:
 
 ```bash
-git tag v0.2.1
-git push origin v0.2.1
+git tag v0.3.0
+git push origin v0.3.0
 ```
 
 `.github/workflows/release.yml` builds the sdist + wheel and publishes to PyPI

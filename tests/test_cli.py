@@ -20,7 +20,7 @@ def test_help_lists_all_commands() -> None:
     result = runner.invoke(app, ["--help"])
     assert result.exit_code == 0
     assert "azaks-conn" in result.stdout
-    for cmd in ("connect", "list", "verify", "rm"):
+    for cmd in ("connect", "refresh", "list", "verify", "rm"):
         assert cmd in result.stdout
 
 
