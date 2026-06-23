@@ -4,6 +4,7 @@ Fetch AKS kubeconfig and merge into ~/.kube/config by alias.
 
 Subcommands:
     connect   Fetch credentials, write alias snapshot, merge into ~/.kube/config.
+    refresh   Re-fetch an existing alias using its recorded RG/subscription.
     list      Show all aksc-managed aliases.
     verify    Probe a managed alias with `kubectl cluster-info`.
     rm        Remove an alias from state, snapshot, and ~/.kube/config.
@@ -187,6 +188,59 @@ def cmd_connect(
         stderr.print(
             "  [dim]Treat this kubeconfig as a high-privilege secret. "
             "`aksc list` will flag it as ADMIN.[/dim]"
+        )
+
+
+# ----------------------------------------------------------------- refresh ----
+@app.command("refresh")
+def cmd_refresh(alias: AliasArg) -> None:
+    """Re-fetch credentials for [bold]ALIAS[/bold] using its recorded metadata.
+
+    Looks up the cluster / resource-group / subscription / admin flag stored by
+    a previous [bold]aksc connect[/bold], re-runs `az aks get-credentials`, and
+    atomically replaces the snapshot + the entries in ~/.kube/config. Useful
+    when the cluster CA has rotated or the cached kubelogin token has expired.
+    """
+    try:
+        records = config.load()
+        if alias not in records:
+            raise UnknownAliasError(
+                f"no aksc-managed alias {alias!r}. Run `aksc list` to see what is registered."
+            )
+        rec = records[alias]
+        cfg = get_credentials(
+            rec.cluster,
+            resource_group=rec.resource_group,
+            subscription=rec.subscription,
+            admin=rec.admin,
+        )
+        rename_entries(cfg, alias)
+        alias_path = default_alias_dir() / alias
+        write_atomic(alias_path, cfg)
+        merge_into(default_kubeconfig(), cfg, alias, overwrite=True)
+        config.upsert(
+            alias,
+            AliasRecord(
+                cluster=rec.cluster,
+                resource_group=rec.resource_group,
+                subscription=rec.subscription,
+                admin=rec.admin,
+                added_at=now_iso(),
+            ),
+        )
+    except AzaksConnError as exc:
+        stderr.print(f"[red]error:[/red] {exc}")
+        raise typer.Exit(code=2) from exc
+
+    stdout.print(
+        f"[green]✓[/green] refreshed [bold cyan]{alias}[/bold cyan] "
+        f"from cluster [bold]{rec.cluster}[/bold]"
+    )
+    stdout.print(f"  snapshot: [dim]{alias_path}[/dim]")
+    if rec.admin:
+        stderr.print(
+            f"[bold yellow]warning:[/bold yellow] alias [bold cyan]{alias}[/bold cyan] "
+            "holds [bold red]cluster-admin[/bold red] credentials — Entra ID / RBAC bypassed."
         )
 
 
