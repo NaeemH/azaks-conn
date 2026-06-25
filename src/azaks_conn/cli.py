@@ -87,7 +87,7 @@ def _root(
     """Common options."""
     hint = _path_hint(os.environ.get("PATH"))
     if hint:
-        stderr.print(f"[dim]{hint}[/dim]")
+        stderr.print(f"[dim]{hint}[/dim]", soft_wrap=True, highlight=False)
 
 
 # --------------------------------------------------------------- option types ----

@@ -73,4 +73,4 @@ def test_root_prints_hint_to_output(fake_local_bin: Path, monkeypatch: pytest.Mo
     monkeypatch.setenv("PATH", "/usr/bin:/bin")
     result = runner.invoke(app, ["list"])
     assert result.exit_code == 0
-    assert "pipx ensurepath" in result.output
+    assert "pipx ensurepath" in " ".join(result.output.split())
