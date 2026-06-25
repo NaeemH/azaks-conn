@@ -15,6 +15,10 @@ The package installs two console scripts that point at the same Typer app:
 | `azaks-conn`  | Long form, friendly for scripts       |
 | `aksc` | Short alias for interactive shell use |
 
+> Installing with `pipx` drops the scripts in `~/.local/bin`. If that directory
+> isn't on your `PATH`, run `pipx ensurepath` and restart your shell. `aksc`
+> prints a one-line reminder to stderr if it detects this situation.
+
 ## Usage
 
 ```bash

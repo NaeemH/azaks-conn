@@ -12,6 +12,8 @@ Subcommands:
 
 from __future__ import annotations
 
+import os
+from pathlib import Path
 from typing import Annotated
 
 import typer
@@ -43,6 +45,27 @@ stdout = Console()
 stderr = Console(stderr=True)
 
 
+def _path_hint(path_env: str | None) -> str | None:
+    """Return a one-line `pipx ensurepath` hint, or None.
+
+    Fires only when our console scripts are installed in ``~/.local/bin`` but
+    that directory is not on ``PATH`` (e.g. the user invoked us via full path
+    or ``python -m`` and would otherwise hit ``command not found``).
+    """
+    local_bin = Path.home() / ".local" / "bin"
+    if not ((local_bin / "aksc").exists() or (local_bin / "azaks-conn").exists()):
+        return None
+    entries = {
+        os.path.normpath(os.path.expanduser(p)) for p in (path_env or "").split(os.pathsep) if p
+    }
+    if os.path.normpath(str(local_bin)) in entries:
+        return None
+    return (
+        f"hint: {local_bin} is not on your PATH, so `aksc`/`azaks-conn` may not "
+        "be found. Run `pipx ensurepath` and restart your shell."
+    )
+
+
 def _version_callback(value: bool) -> None:
     if value:
         stdout.print(f"azaks-conn [bold cyan]{__version__}[/bold cyan]")
@@ -62,6 +85,9 @@ def _root(
     ] = False,
 ) -> None:
     """Common options."""
+    hint = _path_hint(os.environ.get("PATH"))
+    if hint:
+        stderr.print(f"[dim]{hint}[/dim]", soft_wrap=True, highlight=False)
 
 
 # --------------------------------------------------------------- option types ----
