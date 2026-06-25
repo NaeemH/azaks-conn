@@ -22,6 +22,19 @@ def default_kubeconfig() -> Path:
     return Path.home() / ".kube" / "config"
 
 
+def ensure_private_dir(directory: Path) -> None:
+    """Create `directory` (and parents) and enforce 0700 perms.
+
+    Re-asserts 0700 even when the directory already exists with looser perms,
+    since it holds credential snapshots and the aksc state file.
+    """
+    try:
+        directory.mkdir(parents=True, exist_ok=True)
+        directory.chmod(0o700)
+    except OSError as exc:
+        raise KubeconfigWriteError(f"failed to create {directory}: {exc}") from exc
+
+
 def rename_entries(cfg: dict[str, Any], alias: str) -> dict[str, Any]:
     """Rewrite cluster/user/context names in `cfg` to `alias`.
 
@@ -67,10 +80,7 @@ def write_atomic(path: Path, cfg: dict[str, Any]) -> None:
     Uses `tempfile.mkstemp(dir=path.parent)` so the rename is same-filesystem
     and therefore atomic. Cleans up the tempfile on any failure.
     """
-    try:
-        path.parent.mkdir(parents=True, exist_ok=True)
-    except OSError as exc:
-        raise KubeconfigWriteError(f"failed to create {path.parent}: {exc}") from exc
+    ensure_private_dir(path.parent)
 
     try:
         fd, tmp_str = tempfile.mkstemp(prefix=".azaks-conn-", suffix=".tmp", dir=path.parent)

@@ -117,6 +117,42 @@ def test_generic_az_error(monkeypatch: pytest.MonkeyPatch) -> None:
     assert not isinstance(ei.value, ClusterNotFoundError)
 
 
+def test_stderr_traceback_is_condensed(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A multi-line `az` crash (ERROR lines + Python traceback) is condensed.
+
+    Only the `ERROR:` lines should surface; the traceback noise is dropped.
+    """
+    stderr = (
+        "ERROR: The command failed with an unexpected error. Here is the traceback:\n"
+        "ERROR: No module named 'azure.graphrbac'\n"
+        "Traceback (most recent call last):\n"
+        '  File "/opt/az/lib/python3.13/site-packages/knack/cli.py", line 233, in invoke\n'
+        "    cmd_result = self.invocation.execute(args)\n"
+    )
+    _make_fake_run(monkeypatch, returncode=1, stderr=stderr)
+    with pytest.raises(AksAccessError) as ei:
+        get_credentials("my-cluster")
+    msg = str(ei.value)
+    assert "No module named 'azure.graphrbac'" in msg
+    assert "Traceback" not in msg
+    assert "knack/cli.py" not in msg
+
+
+def test_bare_not_found_not_misclassified(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A generic error mentioning 'not found' (but not an AKS marker) stays generic.
+
+    Regression for the previously over-broad `"not found"` substring heuristic.
+    """
+    _make_fake_run(
+        monkeypatch,
+        returncode=1,
+        stderr="ERROR: config file not found in cache",
+    )
+    with pytest.raises(AksAccessError) as ei:
+        get_credentials("my-cluster")
+    assert not isinstance(ei.value, ClusterNotFoundError)
+
+
 def test_invalid_yaml_raises(monkeypatch: pytest.MonkeyPatch) -> None:
     """If `az` returns 0 but the file is somehow not a dict, fail loud."""
     calls: list[list[str]] = []
