@@ -20,6 +20,24 @@ import yaml
 from azaks_conn.errors import AksAccessError, ClusterNotFoundError
 
 
+def _condense_az_stderr(stderr: str) -> str:
+    """Reduce raw ``az`` stderr to its salient line(s).
+
+    ``az`` prefixes genuine error lines with ``ERROR:`` and may append a
+    multi-line Python traceback when it crashes. We surface only the ``ERROR:``
+    lines (dropping the traceback noise); if none are present we fall back to the
+    first non-empty line so the caller still gets *something* actionable.
+    """
+    lines = stderr.splitlines()
+    error_lines = [ln.strip() for ln in lines if ln.strip().upper().startswith("ERROR:")]
+    if error_lines:
+        return " ".join(error_lines)
+    for ln in lines:
+        if ln.strip():
+            return ln.strip()
+    return ""
+
+
 def get_credentials(
     cluster: str,
     *,
@@ -70,18 +88,18 @@ def get_credentials(
         if result.returncode != 0:
             stderr = (result.stderr or "").strip()
             stderr_lower = stderr.lower()
+            detail = _condense_az_stderr(stderr)
             if (
                 "resourcenotfound" in stderr_lower
                 or "could not be found" in stderr_lower
                 or "was not found" in stderr_lower
-                or "not found" in stderr_lower
             ):
                 raise ClusterNotFoundError(
-                    f"AKS cluster {cluster!r} not found: {stderr or '(no detail)'}"
+                    f"AKS cluster {cluster!r} not found: {detail or '(no detail)'}"
                 )
             raise AksAccessError(
                 f"`az aks get-credentials` failed (exit {result.returncode}): "
-                f"{stderr or '(no stderr)'}"
+                f"{detail or '(no stderr)'}"
             )
 
         try:

@@ -53,6 +53,21 @@ def test_save_chmod_600(kube_home: Path) -> None:
     assert perms == 0o600
 
 
+def test_save_chmod_dir_700(kube_home: Path) -> None:
+    save({"x": AliasRecord(cluster="c", added_at="t")})
+    dir_perms = stat.S_IMODE(state_file().parent.stat().st_mode)
+    assert dir_perms == 0o700
+
+
+def test_save_tightens_preexisting_loose_dir(kube_home: Path) -> None:
+    """A pre-existing world-readable state dir is tightened to 0700 on save."""
+    d = state_file().parent
+    d.mkdir(parents=True, exist_ok=True)
+    d.chmod(0o777)
+    save({"x": AliasRecord(cluster="c", added_at="t")})
+    assert stat.S_IMODE(d.stat().st_mode) == 0o700
+
+
 def test_save_contents_are_sorted_json(kube_home: Path) -> None:
     save(
         {

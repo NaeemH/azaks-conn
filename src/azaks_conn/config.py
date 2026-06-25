@@ -21,6 +21,7 @@ from pathlib import Path
 from typing import Any
 
 from azaks_conn.errors import KubeconfigWriteError
+from azaks_conn.kubeconfig import ensure_private_dir
 
 
 @dataclass
@@ -75,10 +76,7 @@ def load() -> dict[str, AliasRecord]:
 def save(aliases: dict[str, AliasRecord]) -> None:
     """Atomically persist `aliases` to the state file with 0600 perms."""
     path = state_file()
-    try:
-        path.parent.mkdir(parents=True, exist_ok=True)
-    except OSError as exc:
-        raise KubeconfigWriteError(f"failed to create {path.parent}: {exc}") from exc
+    ensure_private_dir(path.parent)
 
     data = {"aliases": {name: asdict(rec) for name, rec in aliases.items()}}
     try:
