@@ -12,7 +12,9 @@ Subcommands:
 
 from __future__ import annotations
 
+import json
 import os
+from dataclasses import asdict
 from pathlib import Path
 from typing import Annotated
 
@@ -156,6 +158,17 @@ TimeoutOpt = Annotated[
         max=300,
     ),
 ]
+JsonOpt = Annotated[
+    bool,
+    typer.Option("--json", help="Emit machine-readable JSON instead of a table."),
+]
+NoTruncateOpt = Annotated[
+    bool,
+    typer.Option(
+        "--no-truncate",
+        help="Render full column values without ellipsis (implied when output is piped).",
+    ),
+]
 
 
 # ----------------------------------------------------------------- connect ----
@@ -272,13 +285,18 @@ def cmd_refresh(alias: AliasArg) -> None:
 
 # -------------------------------------------------------------------- list ----
 @app.command("list")
-def cmd_list() -> None:
+def cmd_list(as_json: JsonOpt = False, no_truncate: NoTruncateOpt = False) -> None:
     """List all aksc-managed kubeconfig aliases."""
     try:
         records = config.load()
     except AzaksConnError as exc:
         stderr.print(f"[red]error:[/red] {exc}")
         raise typer.Exit(code=2) from exc
+
+    if as_json:
+        payload = [{"alias": name, **asdict(rec)} for name, rec in sorted(records.items())]
+        print(json.dumps(payload, indent=2))
+        return
 
     if not records:
         stdout.print(
@@ -287,13 +305,18 @@ def cmd_list() -> None:
         )
         return
 
+    # Avoid ellipsis truncation when piped (non-TTY) or explicitly requested, so the
+    # Subscription id and Added timestamp stay intact for downstream tooling.
+    full = no_truncate or not stdout.is_terminal
+    console = Console(width=200) if full else stdout
+
     table = Table(title="aksc-managed aliases", show_lines=False)
     table.add_column("Alias", style="cyan", no_wrap=True)
     table.add_column("Cluster")
     table.add_column("Resource Group", style="dim")
-    table.add_column("Subscription", style="dim")
+    table.add_column("Subscription", style="dim", no_wrap=full)
     table.add_column("Admin", justify="center")
-    table.add_column("Added")
+    table.add_column("Added", no_wrap=full)
     for alias_name, rec in sorted(records.items()):
         table.add_row(
             alias_name,
@@ -303,7 +326,7 @@ def cmd_list() -> None:
             "[bold red]ADMIN[/bold red]" if rec.admin else "-",
             rec.added_at or "-",
         )
-    stdout.print(table)
+    console.print(table)
 
 
 # ------------------------------------------------------------------ verify ----

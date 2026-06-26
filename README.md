@@ -32,7 +32,7 @@ Four commands cover the alias lifecycle:
 | --- | --- |
 | `aksc connect CLUSTER [--alias NAME] [--resource-group RG] [--subscription SUB] [--admin] [--overwrite]` | Fetch AKS credentials and merge into `~/.kube/config` under the given alias. |
 | `aksc refresh ALIAS` | Re-fetch credentials for an existing alias using its recorded cluster / RG / subscription / admin flag. Useful after CA rotation or kubelogin cache expiry. |
-| `aksc list` | Rich-table inventory of aksc-managed aliases (with provenance metadata). |
+| `aksc list` | Rich-table inventory of aksc-managed aliases (with provenance metadata). Add `--json` for machine-readable output, or `--no-truncate` to keep full column values (auto-enabled when piped). |
 | `aksc verify ALIAS [--timeout N]` | Probe the alias's API server via `kubectl cluster-info`. |
 | `aksc rm ALIAS [--force]` | Remove the alias from `~/.kube/config`, the snapshot directory, and the state file. |
 
