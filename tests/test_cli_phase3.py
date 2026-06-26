@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import copy
+import json
 from pathlib import Path
 from typing import Any
 
@@ -79,6 +80,60 @@ def test_list_marks_admin_alias(kube_home: Path) -> None:
     # The admin row should contain the literal "ADMIN" marker (Rich strips
     # markup when stdout is not a TTY, so the bare word survives).
     assert "ADMIN" in result.stdout
+
+
+def test_list_json_empty(kube_home: Path) -> None:
+    result = runner.invoke(app, ["list", "--json"])
+    assert result.exit_code == 0
+    assert json.loads(result.stdout) == []
+
+
+def test_list_json_populated(kube_home: Path) -> None:
+    _seed_state(
+        {
+            "prod": AliasRecord(
+                cluster="prod-cluster",
+                resource_group="rg-prod",
+                subscription="00000000-0000-0000-0000-000000000001",
+                admin=True,
+                added_at="2026-06-25T08:00:00Z",
+            ),
+        }
+    )
+    result = runner.invoke(app, ["list", "--json"])
+    assert result.exit_code == 0
+    payload = json.loads(result.stdout)
+    assert payload == [
+        {
+            "alias": "prod",
+            "cluster": "prod-cluster",
+            "resource_group": "rg-prod",
+            "subscription": "00000000-0000-0000-0000-000000000001",
+            "admin": True,
+            "added_at": "2026-06-25T08:00:00Z",
+        }
+    ]
+
+
+def test_list_non_tty_does_not_truncate(kube_home: Path) -> None:
+    """Piped output must keep the full subscription id and timestamp (issue #8)."""
+    sub = "00000000-0000-0000-0000-000000000abc"
+    ts = "2026-06-25T08:00:00Z"
+    _seed_state(
+        {
+            "prod": AliasRecord(
+                cluster="prod-cluster",
+                resource_group="rg-prod",
+                subscription=sub,
+                added_at=ts,
+            ),
+        }
+    )
+    result = runner.invoke(app, ["list"])
+    assert result.exit_code == 0
+    assert sub in result.stdout
+    assert ts in result.stdout
+    assert "…" not in result.stdout
 
 
 # ==========================================================================
