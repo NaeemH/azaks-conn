@@ -90,8 +90,8 @@ pytest -q
 Releases are tag-driven. Bump `src/azaks_conn/__about__.py`, commit, then:
 
 ```bash
-git tag v0.3.1
-git push origin v0.3.1
+git tag v0.3.2
+git push origin v0.3.2
 ```
 
 `.github/workflows/release.yml` builds the sdist + wheel and publishes to PyPI
