@@ -86,10 +86,15 @@ def save(aliases: dict[str, AliasRecord]) -> None:
 
     tmp = Path(tmp_str)
     try:
-        os.fchmod(fd, 0o600)
+        # mkstemp already created this 0600, so the alias state is never
+        # written through a wider mode. os.fchmod would be redundant here and
+        # does not exist on Windows at all, so chmod by path instead - it is
+        # portable, and it must happen only after fdopen has closed the
+        # descriptor, because Windows refuses to touch an open file.
         with os.fdopen(fd, "w") as f:
             json.dump(data, f, indent=2, sort_keys=True)
             f.write("\n")
+        os.chmod(tmp, 0o600)
         os.replace(tmp, path)
     except OSError as exc:
         tmp.unlink(missing_ok=True)
