@@ -36,8 +36,14 @@ def test_no_args_is_help() -> None:
 
 @pytest.fixture()
 def fake_local_bin(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    """A fake HOME whose ~/.local/bin holds an installed console script."""
+    """A fake HOME whose ~/.local/bin holds an installed console script.
+
+    Path.home() reads $HOME only on POSIX; on Windows it resolves USERPROFILE,
+    so patching Path.home directly is the only redirect that holds everywhere.
+    """
     monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.setenv("USERPROFILE", str(tmp_path))
+    monkeypatch.setattr(Path, "home", classmethod(lambda _cls: tmp_path))
     local_bin = tmp_path / ".local" / "bin"
     local_bin.mkdir(parents=True)
     (local_bin / "aksc").write_text("#!/bin/sh\n")
