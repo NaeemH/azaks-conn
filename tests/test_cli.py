@@ -51,7 +51,9 @@ def fake_local_bin(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
 
 
 def test_path_hint_when_local_bin_missing_from_path(fake_local_bin: Path) -> None:
-    hint = _path_hint("/usr/bin:/bin")
+    # _path_hint splits on os.pathsep, which is ";" on Windows - a hard-coded
+    # POSIX PATH would arrive as one entry and the hint would never fire.
+    hint = _path_hint(os.pathsep.join(["/usr/bin", "/bin"]))
     assert hint is not None
     assert "pipx ensurepath" in hint
     assert str(fake_local_bin) in hint
@@ -76,7 +78,7 @@ def test_path_hint_none_when_not_installed_there(
 
 
 def test_root_prints_hint_to_output(fake_local_bin: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("PATH", "/usr/bin:/bin")
+    monkeypatch.setenv("PATH", os.pathsep.join(["/usr/bin", "/bin"]))
     result = runner.invoke(app, ["list"])
     assert result.exit_code == 0
     assert "pipx ensurepath" in " ".join(result.output.split())

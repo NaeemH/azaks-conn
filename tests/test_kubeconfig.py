@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import copy
+import os
 import stat
 from pathlib import Path
 from typing import Any
@@ -63,8 +64,9 @@ def test_write_atomic_creates_parents_and_chmods_600(
     target = tmp_path / "nested" / "dir" / "kubeconfig"
     write_atomic(target, az_kubeconfig)
     assert target.exists()
-    perms = stat.S_IMODE(target.stat().st_mode)
-    assert perms == 0o600
+    if os.name == "posix":
+        perms = stat.S_IMODE(target.stat().st_mode)
+        assert perms == 0o600
     loaded = yaml.safe_load(target.read_text())
     assert loaded["current-context"] == "my-cluster"
 
