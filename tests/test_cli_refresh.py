@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import copy
+import os
 from pathlib import Path
 from typing import Any
 
@@ -77,7 +78,8 @@ def test_refresh_happy_path(
     # Snapshot exists with mode 0600.
     snapshot = kube_home / ".kube" / "azaks-conn" / "prod"
     assert snapshot.exists()
-    assert oct(snapshot.stat().st_mode & 0o777) == "0o600"
+    if os.name == "posix":
+        assert oct(snapshot.stat().st_mode & 0o777) == "0o600"
 
     # Main kubeconfig has the renamed entries + current-context = prod.
     main_cfg = yaml.safe_load((kube_home / ".kube" / "config").read_text())

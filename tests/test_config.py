@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 import stat
 from pathlib import Path
 
@@ -10,6 +11,12 @@ import pytest
 
 from azaks_conn.config import AliasRecord, load, now_iso, remove, save, state_file, upsert
 from azaks_conn.errors import KubeconfigWriteError
+
+# Windows reports a synthetic st_mode built from the read-only flag alone, so
+# POSIX mode assertions cannot hold there and prove nothing when they do.
+posix_only = pytest.mark.skipif(
+    os.name != "posix", reason="POSIX mode bits are not meaningful on this platform"
+)
 
 
 def test_state_file_under_home(kube_home: Path) -> None:
@@ -47,18 +54,21 @@ def test_round_trip(kube_home: Path) -> None:
     assert loaded == {"a": rec_a, "b": rec_b}
 
 
+@posix_only
 def test_save_chmod_600(kube_home: Path) -> None:
     save({"x": AliasRecord(cluster="c", added_at="t")})
     perms = stat.S_IMODE(state_file().stat().st_mode)
     assert perms == 0o600
 
 
+@posix_only
 def test_save_chmod_dir_700(kube_home: Path) -> None:
     save({"x": AliasRecord(cluster="c", added_at="t")})
     dir_perms = stat.S_IMODE(state_file().parent.stat().st_mode)
     assert dir_perms == 0o700
 
 
+@posix_only
 def test_save_tightens_preexisting_loose_dir(kube_home: Path) -> None:
     """A pre-existing world-readable state dir is tightened to 0700 on save."""
     d = state_file().parent

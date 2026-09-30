@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import copy
+import os
 import stat
 from pathlib import Path
 from typing import Any
@@ -60,8 +61,9 @@ def test_connect_happy_path(
     main = kube_home / ".kube" / "config"
     assert snapshot.exists()
     assert main.exists()
-    assert stat.S_IMODE(snapshot.stat().st_mode) == 0o600
-    assert stat.S_IMODE(main.stat().st_mode) == 0o600
+    if os.name == "posix":
+        assert stat.S_IMODE(snapshot.stat().st_mode) == 0o600
+        assert stat.S_IMODE(main.stat().st_mode) == 0o600
 
     main_cfg = yaml.safe_load(main.read_text())
     assert main_cfg["current-context"] == "prod"
