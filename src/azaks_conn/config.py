@@ -91,7 +91,10 @@ def save(aliases: dict[str, AliasRecord]) -> None:
         # does not exist on Windows at all, so chmod by path instead - it is
         # portable, and it must happen only after fdopen has closed the
         # descriptor, because Windows refuses to touch an open file.
-        with os.fdopen(fd, "w") as f:
+        #
+        # newline="" disables text-mode newline translation, so the state file
+        # is byte-identical whichever platform wrote it.
+        with os.fdopen(fd, "w", encoding="utf-8", newline="") as f:
             json.dump(data, f, indent=2, sort_keys=True)
             f.write("\n")
         os.chmod(tmp, 0o600)
