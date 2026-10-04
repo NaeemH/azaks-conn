@@ -71,6 +71,21 @@ def test_write_atomic_creates_parents_and_chmods_600(
     assert loaded["current-context"] == "my-cluster"
 
 
+def test_write_atomic_never_writes_crlf(tmp_path: Path, az_kubeconfig: dict[str, Any]) -> None:
+    """The kubeconfig must be byte-identical whichever platform wrote it.
+
+    Read as BYTES on purpose: read_text() translates CRLF back to LF, so the
+    assertions above pass against a file whose every line has been rewritten.
+    This function rewrites the WHOLE merged kubeconfig, so without newline=""
+    one run on Windows flips a file az aks get-credentials wrote with LF.
+    """
+    target = tmp_path / "kubeconfig"
+    write_atomic(target, az_kubeconfig)
+    raw = target.read_bytes()
+    assert b"\r\n" not in raw
+    assert b"\r" not in raw
+
+
 def test_write_atomic_overwrites_existing(tmp_path: Path, az_kubeconfig: dict[str, Any]) -> None:
     target = tmp_path / "kubeconfig"
     target.write_text("garbage: true\n")

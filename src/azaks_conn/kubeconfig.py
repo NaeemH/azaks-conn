@@ -94,7 +94,12 @@ def write_atomic(path: Path, cfg: dict[str, Any]) -> None:
         # does not exist on Windows at all, so chmod by path instead - it is
         # portable, and it must happen only after fdopen has closed the
         # descriptor, because Windows refuses to touch an open file.
-        with os.fdopen(fd, "w") as f:
+        #
+        # newline="" disables text-mode newline translation. Without it Windows
+        # rewrites every \n to \r\n, and because this function rewrites the
+        # WHOLE merged kubeconfig, a single run would flip every line of a file
+        # that az aks get-credentials wrote with LF.
+        with os.fdopen(fd, "w", encoding="utf-8", newline="") as f:
             yaml.safe_dump(cfg, f, default_flow_style=False, sort_keys=False)
         os.chmod(tmp, 0o600)
         os.replace(tmp, path)
